@@ -1,4 +1,12 @@
-// ! Handler
+//! ================================================================
+//! CUSTOM HOOK: useHandleApi - Generic API Data Handler
+//! ================================================================
+//! Description: Manages async API calls with loading, error, and data states
+//! Features:
+//!   - Automatic data fetching on mount
+//!   - Loading and error state management
+//!   - Cleanup to prevent state updates after unmount
+//! ================================================================
 
 import { useEffect, useState } from "react";
 
@@ -50,7 +58,12 @@ export function useHandleApi(apiFn) {
   };
 }
 
-// ! transaction handler
+//! ================================================================
+//! CUSTOM HOOK: useSellerProducts - Seller Products Data Handler
+//! ================================================================
+//! Description: Specialized hook for fetching seller products
+//! Uses: useHandleApi with listSellerProducts API service
+//! ================================================================
 
 ("use client");
 
@@ -67,7 +80,15 @@ export function useSellerProducts() {
   return { products, loading, error, setProducts };
 }
 
-// ! example of usage
+//! ================================================================
+//! COMPONENT: SellerProductsOverview - Product Display Component
+//! ================================================================
+//! Description: Displays seller products in a grid layout
+//! Features:
+//!   - Responsive 2-column grid (md breakpoint)
+//!   - Product cards with name, category, price, and description
+//!   - Hover effects and styling
+//! ================================================================
 
 import { useSellerProducts } from "@/app/features/seller/hooks/product/use-seller-products";
 
