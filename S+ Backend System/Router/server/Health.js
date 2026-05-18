@@ -1,10 +1,5 @@
 const express = require("express");
-const app = express();
-
-express.Router = express.Router();
 const router = express.Router();
-
-const { checkPort } = require("../../Tools/Server/Spy");
 
 //! ================================================================
 //! ROUTE: /health - Server Health Check
@@ -25,8 +20,15 @@ router.get("/health", (req, res) => {
 
 router.get("/port", (req, res) => {
   try {
-    const port = process.env.PORT ? Number(process.env.PORT) : checkPort();
-    res.status(200).json({ port: port ? port : "unknown" });
+    const runtimePort = req.app.get("port");
+    const envPort = Number(process.env.PORT);
+    const port = Number.isFinite(runtimePort)
+      ? runtimePort
+      : Number.isFinite(envPort)
+        ? envPort
+        : "unknown";
+
+    res.status(200).json({ port });
   } catch (error) {
     console.error("Port check failed:", error.message);
     res.status(500).json({ status: "error", message: "Port check failed" });

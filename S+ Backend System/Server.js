@@ -3,9 +3,13 @@ const express = require("express");
 const app = express();
 
 const { portSwitch } = require("./Tools/Server/PortSwitch");
+const healthRouter = require("./Router/server/Health");
+
+app.use("/", healthRouter);
 
 async function startServer() {
   const selectedPort = await portSwitch();
+  app.set("port", selectedPort);
   const isListeningTo = `http://localhost:${selectedPort}`;
 
   app.listen(selectedPort, () => {
