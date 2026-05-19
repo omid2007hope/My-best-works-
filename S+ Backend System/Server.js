@@ -3,8 +3,10 @@ const express = require("express");
 const app = express();
 
 const { portSwitch } = require("./Tools/Server/PortSwitch");
+
 const healthRouter = require("./Router/server/Health");
 
+app.use(cors());
 app.use("/", healthRouter);
 
 async function startServer() {
