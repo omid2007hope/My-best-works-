@@ -4,10 +4,10 @@ const app = express();
 
 const { portSwitch } = require("./Tools/Server/PortSwitch");
 
-const healthRouter = require("./Router/server/Health");
+const healthRouter = require("./Router/Main/index");
 
 app.use(cors());
-app.use("/", healthRouter);
+app.use("/server", healthRouter);
 
 async function startServer() {
   const selectedPort = await portSwitch();
