@@ -1,8 +1,9 @@
 const express = require("express");
+const asyncHandler = require("../Tools/Handler/Async");
 const Status = require("./Share/Status");
 
 const server = new (class Server extends Status {
-  getHealth = async (req, res) => {
+  getHealth = asyncHandler(async (req, res) => {
     try {
       res.status(this.success).json({ status: "ok" });
     } catch (error) {
@@ -11,9 +12,9 @@ const server = new (class Server extends Status {
         .status(this.error)
         .json({ status: "error", message: "Health check failed" });
     }
-  };
+  });
 
-  getPort = async (req, res) => {
+  getPort = asyncHandler(async (req, res) => {
     try {
       const runtimePort = req.app.get("port");
       const envPort = Number(process.env.PORT);
@@ -30,7 +31,7 @@ const server = new (class Server extends Status {
         .status(this.error)
         .json({ status: "error", message: "Port check failed" });
     }
-  };
+  });
 })();
 
 module.exports = {
