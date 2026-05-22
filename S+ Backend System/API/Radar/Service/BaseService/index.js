@@ -1,10 +1,19 @@
 class BaseService {
   simplePost = async (data) => {
-    const checkArray = Array.isArray(data) ? data : [data];
-    const safeData = checkArray;
+    if (!this.model) {
+      return data;
+    }
+
+    const payloads = Array.isArray(data) ? data : [data];
 
     try {
-      return new this.model(safeData).save();
+      if (Array.isArray(data)) {
+        return Promise.all(
+          payloads.map((payload) => new this.model(payload).save()),
+        );
+      }
+
+      return new this.model(payloads[0]).save();
     } catch (error) {
       console.error(error);
       throw new Error("Post was unsuccessful");

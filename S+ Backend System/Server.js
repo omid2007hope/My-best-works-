@@ -3,6 +3,7 @@ const express = require("express");
 const app = express();
 
 const { portSwitch } = require("./Tools/Server/PortSwitch");
+const connectMongoDB = require("./API/Radar/DataBase/MongoDB");
 
 const healthRouter = require("./Router/Main/index");
 
@@ -11,6 +12,8 @@ app.use(express.json());
 app.use("/server", healthRouter);
 
 async function startServer() {
+  await connectMongoDB();
+
   const selectedPort = await portSwitch();
   app.set("port", selectedPort);
   const isListeningTo = `http://localhost:${selectedPort}`;
