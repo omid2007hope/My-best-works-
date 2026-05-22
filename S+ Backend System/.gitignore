@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime / cache
+.pnp.*
+.cache/
+.tmp/
+tmp/
+
+# Environment files (secrets)
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# Secret and credential files
+secrets/
+secret/
+*.secret
+*.secrets
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.csr
+id_rsa
+id_dsa
+*.kdbx
+*.gpg
+
+# Token / credential exports
+*.token
+*.tokens
+*.credentials
+credentials.json
+service-account*.json
+
+# Local-only configs
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
