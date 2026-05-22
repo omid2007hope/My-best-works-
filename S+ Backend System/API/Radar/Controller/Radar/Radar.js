@@ -1,6 +1,6 @@
 const asyncHandler = require("../../../../Tools/Handler/Async");
 const Status = require("../../../../Controller/Share/Status");
-const radarService = require("../../Service/Radar");
+const radarService = require("../../Service/Radar/Radar");
 
 const radarController = new (class RadarController extends Status {
   getStatus = asyncHandler(async (req, res) => {

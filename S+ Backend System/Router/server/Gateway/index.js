@@ -1,6 +1,6 @@
 const Health = require("../Health");
 const Port = require("../Port");
-const Radar = require("../../../API/Radar/Router/Radar/Radar");
+const Radar = require("../../../API/Radar/Router/Main/index");
 
 const express = require("express");
 const router = express.Router();
