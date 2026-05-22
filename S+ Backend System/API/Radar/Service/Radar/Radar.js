@@ -65,9 +65,9 @@ class RadarService extends EventEmitter {
     return this.getStatus();
   };
 
-  startStreaming = async () => {
+  startStreaming = async (initializeOptions = {}) => {
     if (!this.initialized) {
-      throw new Error("Radar is not initialized");
+      await this.initialize(initializeOptions);
     }
 
     if (this.mode === "native") {

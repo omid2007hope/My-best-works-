@@ -13,7 +13,7 @@ const radarController = new (class RadarController extends Status {
   });
 
   startStreaming = asyncHandler(async (req, res) => {
-    const status = await radarService.startStreaming();
+    const status = await radarService.startStreaming(req.body || {});
     res.status(this.success).json(status);
   });
 
