@@ -1,4 +1,5 @@
 const BaseService = require("../BaseService/index");
+const SpeedModel = require("../../Model/Speed/SpeedModel");
 
 const SPEED_UNITS = Object.freeze({
   KMH: "KMH",
@@ -9,6 +10,11 @@ const SPEED_UNITS = Object.freeze({
 });
 
 module.exports = new (class SpeedService extends BaseService {
+  constructor() {
+    super();
+    this.model = SpeedModel;
+  }
+
   toKmh = (value, unit = SPEED_UNITS.KMH) => {
     switch (String(unit).toUpperCase()) {
       case SPEED_UNITS.KMH:

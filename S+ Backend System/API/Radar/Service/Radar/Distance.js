@@ -1,6 +1,12 @@
 const BaseService = require("../BaseService/index");
+const DistanceModel = require("../../Model/Distance/DistanceModel");
 
 module.exports = new (class DistanceService extends BaseService {
+  constructor() {
+    super();
+    this.model = DistanceModel;
+  }
+
   CalculateAndPost = async (waveBounceBackDuration) => {
     const speedOfLight = 299792458; // in meters per second
 
