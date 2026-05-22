@@ -2,10 +2,17 @@
   "name": "s-backend-system",
   "private": true,
   "scripts": {
-    "start": "node Server.js"
+    "install": "echo Skipping Radar native build during npm install",
+    "start": "node Server.js",
+    "radar:build": "node-gyp rebuild",
+    "radar:clean": "node-gyp clean"
   },
   "dependencies": {
     "cors": "^2.8.6",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "node-addon-api": "^8.1.0"
+  },
+  "devDependencies": {
+    "node-gyp": "^11.2.0"
   }
 }

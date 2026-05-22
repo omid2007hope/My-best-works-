@@ -7,6 +7,7 @@ const { portSwitch } = require("./Tools/Server/PortSwitch");
 const healthRouter = require("./Router/Main/index");
 
 app.use(cors());
+app.use(express.json());
 app.use("/server", healthRouter);
 
 async function startServer() {
