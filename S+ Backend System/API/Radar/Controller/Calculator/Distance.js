@@ -2,18 +2,25 @@ const asyncHandler = require("../../../../Tools/Handler/Async");
 const Status = require("../../../../Controller/Share/Status");
 
 const Distance = require("../../Model/Distance/DistanceModel");
-const Speed = require("../../Model/Speed/SpeedModel");
-const Identification = require("../../Model/Identification/IdentificationModel");
-const Radar = require("../../Model/Radar/RadarModel");
 
 const distanceController = new (class DistanceController extends Status {
+  // ── Distance ──────────────────────────────────────────────────────────────
+
   listDistance = asyncHandler(async (req, res) => {
-    const records = await Distance.find().sort({ timestamp: -1 });
+    const filter = req.query.targetId ? { targetId: req.query.targetId } : {};
+    const records = await Distance.find(filter).sort({ timestamp: -1 });
     res.status(this.success).json(records);
   });
 
+  // Raw backfill — stores posted fields directly without any computation.
   createDistance = asyncHandler(async (req, res) => {
     const record = await Distance.create(req.body || {});
+    res.status(this.created).json(record);
+  });
+
+  // Compute-first — calculates distanceMeters from burst payload or TOF field.
+  computeDistance = asyncHandler(async (req, res) => {
+    const record = await distanceService.CalculateAndPost(req.body);
     res.status(this.created).json(record);
   });
 })();
@@ -21,4 +28,5 @@ const distanceController = new (class DistanceController extends Status {
 module.exports = {
   listDistance: distanceController.listDistance,
   createDistance: distanceController.createDistance,
+  computeDistance: distanceController.computeDistance,
 };

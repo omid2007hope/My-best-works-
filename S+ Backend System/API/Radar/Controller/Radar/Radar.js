@@ -46,6 +46,18 @@ const radarController = new (class RadarController extends Status {
     const status = await radarService.shutdown();
     res.status(this.success).json(status);
   });
+
+  // ── Radar ─────────────────────────────────────────────────────────────────
+
+  listRadar = asyncHandler(async (req, res) => {
+    const records = await Radar.find().sort({ timestamp: -1 });
+    res.status(this.success).json(records);
+  });
+
+  createRadar = asyncHandler(async (req, res) => {
+    const record = await Radar.create(req.body || {});
+    res.status(this.created).json(record);
+  });
 })();
 
 module.exports = {
@@ -55,4 +67,6 @@ module.exports = {
   stopStreaming: radarController.stopStreaming,
   readBurst: radarController.readBurst,
   shutdown: radarController.shutdown,
+  listRadar: radarController.listRadar,
+  createRadar: radarController.createRadar,
 };

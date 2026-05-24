@@ -1,19 +1,34 @@
 const asyncHandler = require("../../../../Tools/Handler/Async");
 const Status = require("../../../../Controller/Share/Status");
 
-const Distance = require("../../Model/Distance/DistanceModel");
 const Speed = require("../../Model/Speed/SpeedModel");
-const Identification = require("../../Model/Identification/IdentificationModel");
-const Radar = require("../../Model/Radar/RadarModel");
 
 const speedController = new (class SpeedController extends Status {
+  // ── Speed ─────────────────────────────────────────────────────────────────
+
   listSpeed = asyncHandler(async (req, res) => {
-    const records = await Speed.find().sort({ timestamp: -1 });
+    const filter = req.query.targetId ? { targetId: req.query.targetId } : {};
+    const records = await Speed.find(filter).sort({ timestamp: -1 });
     res.status(this.success).json(records);
   });
 
+  // Raw backfill — stores posted fields directly without any computation.
   createSpeed = asyncHandler(async (req, res) => {
     const record = await Speed.create(req.body || {});
+    res.status(this.created).json(record);
+  });
+
+  // Compute-first — derives speedKmh from a distanceLogs array (min 2 entries).
+  computeSpeed = asyncHandler(async (req, res) => {
+    const { distanceLogs, unit, targetId } = req.body || {};
+    if (!Array.isArray(distanceLogs) || distanceLogs.length < 2) {
+      return res.status(422).json({
+        message: "distanceLogs array with at least 2 entries is required.",
+      });
+    }
+    const record = await speedService.calculateAndPost(distanceLogs, unit, {
+      targetId: targetId ?? null,
+    });
     res.status(this.created).json(record);
   });
 })();
@@ -21,4 +36,5 @@ const speedController = new (class SpeedController extends Status {
 module.exports = {
   listSpeed: speedController.listSpeed,
   createSpeed: speedController.createSpeed,
+  computeSpeed: speedController.computeSpeed,
 };
