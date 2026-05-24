@@ -54,10 +54,35 @@ const radarFormatSchema = new mongoose.Schema(
 
 const radarSchema = new mongoose.Schema(
   {
+    event: {
+      type: String,
+      required: true,
+      default: "burst",
+    },
     source: {
       type: String,
       required: true,
       default: "mock",
+    },
+    mode: {
+      type: String,
+      default: "mock",
+    },
+    initialized: {
+      type: Boolean,
+      default: false,
+    },
+    streaming: {
+      type: Boolean,
+      default: false,
+    },
+    sensorId: {
+      type: Number,
+      default: null,
+    },
+    config: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
     },
     format: {
       type: radarFormatSchema,
@@ -70,6 +95,10 @@ const radarSchema = new mongoose.Schema(
     data_base64: {
       type: String,
       required: true,
+    },
+    payload: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
     },
     timestamp: {
       type: Date,

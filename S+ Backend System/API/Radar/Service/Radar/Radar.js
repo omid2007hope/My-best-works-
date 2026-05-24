@@ -1,8 +1,10 @@
-const { EventEmitter } = require("events");
+const BaseService = require("../BaseService/index");
+const RadarModel = require("../../Model/Radar/RadarModel");
 
-class RadarService extends EventEmitter {
+class RadarService extends BaseService {
   constructor() {
     super();
+    this.model = RadarModel;
     this.native = this.#loadNativeModule();
     this.mode = this.native ? "native" : "mock";
     this.initialized = false;
@@ -42,6 +44,143 @@ class RadarService extends EventEmitter {
     this.#assertNotImplemented(result);
     return result;
   }
+
+  #readSampleValue(buffer, offset, sampleBytes, isBigEndian) {
+    if (sampleBytes === 1) {
+      return buffer.readUInt8(offset);
+    }
+
+    if (sampleBytes === 2) {
+      return isBigEndian
+        ? buffer.readUInt16BE(offset)
+        : buffer.readUInt16LE(offset);
+    }
+
+    if (sampleBytes === 4) {
+      return isBigEndian
+        ? buffer.readUInt32BE(offset)
+        : buffer.readUInt32LE(offset);
+    }
+
+    throw new Error(`Unsupported bits_per_sample: ${sampleBytes * 8}`);
+  }
+
+  getBurstValues = (burstPayload = {}) => {
+    if (!burstPayload || typeof burstPayload !== "object") {
+      throw new Error("Radar burst payload must be an object.");
+    }
+
+    const format = burstPayload.format || {};
+    const bitsPerSample = Number(
+      format.bits_per_sample ?? this.config.bitsPerSample,
+    );
+    const samplesPerChirp = Number(
+      format.samples_per_chirp ?? this.config.samplesPerChirp,
+    );
+    const channelsCount = Number(
+      format.channels_count ?? this.config.channelsCount,
+    );
+    const chirpsPerBurst = Number(
+      format.chirps_per_burst ?? this.config.chirpsPerBurst,
+    );
+    const sampleBytes = Math.max(1, Math.ceil(bitsPerSample / 8));
+    const isBigEndian = Boolean(format.is_big_endian);
+    const isChannelsInterleaved = Boolean(format.is_channels_interlieved);
+    const dataBase64 = String(burstPayload.data_base64 || "");
+    const buffer = Buffer.from(dataBase64, "base64");
+
+    if (!dataBase64) {
+      throw new Error("Radar burst payload is missing data_base64.");
+    }
+
+    const samples = [];
+    const sampleCount = Math.floor(buffer.length / sampleBytes);
+
+    for (let index = 0; index < sampleCount; index += 1) {
+      const offset = index * sampleBytes;
+      samples.push(
+        this.#readSampleValue(buffer, offset, sampleBytes, isBigEndian),
+      );
+    }
+
+    const expectedSampleCount =
+      chirpsPerBurst * samplesPerChirp * channelsCount;
+    const samplesByChirp = [];
+
+    for (let chirpIndex = 0; chirpIndex < chirpsPerBurst; chirpIndex += 1) {
+      const chirpStart = chirpIndex * samplesPerChirp * channelsCount;
+      const chirpSlice = samples.slice(
+        chirpStart,
+        chirpStart + samplesPerChirp * channelsCount,
+      );
+      const channels = [];
+
+      for (
+        let channelIndex = 0;
+        channelIndex < channelsCount;
+        channelIndex += 1
+      ) {
+        const channelSamples = [];
+
+        for (
+          let sampleIndex = 0;
+          sampleIndex < samplesPerChirp;
+          sampleIndex += 1
+        ) {
+          const sourceIndex = isChannelsInterleaved
+            ? sampleIndex * channelsCount + channelIndex
+            : channelIndex * samplesPerChirp + sampleIndex;
+
+          channelSamples.push(chirpSlice[sourceIndex]);
+        }
+
+        const sampleTotal = channelSamples.reduce(
+          (sum, value) => sum + value,
+          0,
+        );
+
+        channels.push({
+          channelIndex,
+          samples: channelSamples,
+          minSample: Math.min(...channelSamples),
+          maxSample: Math.max(...channelSamples),
+          averageSample: sampleTotal / channelSamples.length,
+        });
+      }
+
+      samplesByChirp.push({
+        chirpIndex,
+        channels,
+      });
+    }
+
+    const sampleTotal = samples.reduce((sum, value) => sum + value, 0);
+    const maxSampleValue = Number(format.max_sample_value ?? 0);
+
+    return {
+      source: burstPayload.source || this.mode,
+      format,
+      readBytes: Number(burstPayload.read_bytes ?? buffer.length),
+      decodedBytes: buffer.length,
+      sampleBytes,
+      sampleCount,
+      expectedSampleCount,
+      isSampleCountValid: sampleCount === expectedSampleCount,
+      isReadLengthValid:
+        Number(burstPayload.read_bytes ?? buffer.length) === buffer.length,
+      samples,
+      samplesByChirp,
+      firstSample: samples[0] ?? null,
+      lastSample: samples.at(-1) ?? null,
+      minSample: samples.length ? Math.min(...samples) : null,
+      maxSample: samples.length ? Math.max(...samples) : null,
+      averageSample: samples.length ? sampleTotal / samples.length : null,
+      normalizedPeakRatio:
+        samples.length && maxSampleValue > 0
+          ? Math.max(...samples) / maxSampleValue
+          : null,
+    };
+  };
 
   initialize = async ({
     sensorId = 0,
@@ -118,15 +257,34 @@ class RadarService extends EventEmitter {
       throw new Error("Radar stream is not active");
     }
 
-    if (this.mode === "native") {
-      const burst = this.#runNative("readBurst");
-      return {
-        source: "native",
-        burst,
-      };
+    const rawBurst =
+      this.mode === "native"
+        ? {
+            source: "native",
+            ...(this.#runNative("readBurst") || {}),
+          }
+        : this.#readMockBurst();
+
+    if (!rawBurst.data_base64) {
+      return rawBurst;
     }
 
-    return this.#readMockBurst();
+    const decodedBurst = this.getBurstValues(rawBurst);
+
+    return this.simplePost({
+      event: "burst",
+      source: rawBurst.source || this.mode,
+      mode: this.mode,
+      initialized: this.initialized,
+      streaming: this.streaming,
+      sensorId: this.sensorId,
+      config: this.config,
+      format: rawBurst.format,
+      read_bytes: rawBurst.read_bytes,
+      data_base64: rawBurst.data_base64,
+      payload: decodedBurst,
+      timestamp: new Date(rawBurst.format?.timestamp_ms ?? Date.now()),
+    });
   };
 
   #readMockBurst() {
