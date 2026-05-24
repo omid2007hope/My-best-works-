@@ -25,7 +25,15 @@ test("records router exposes all expected resource routes", () => {
     .filter((path) => typeof path === "string")
     .sort();
 
-  assert.deepEqual(paths, ["/distance", "/identification", "/radar", "/speed"]);
+  assert.deepEqual(paths, [
+    "/distance",
+    "/distance/compute",
+    "/identification",
+    "/identification/compute",
+    "/radar",
+    "/speed",
+    "/speed/compute",
+  ]);
 });
 
 test("records controller exports all list/create handlers", () => {
@@ -34,10 +42,13 @@ test("records controller exports all list/create handlers", () => {
   [
     "listDistance",
     "createDistance",
+    "computeDistance",
     "listSpeed",
     "createSpeed",
+    "computeSpeed",
     "listIdentification",
     "createIdentification",
+    "computeIdentification",
     "listRadar",
     "createRadar",
   ].forEach((handlerName) => {

@@ -40,14 +40,20 @@ module.exports = new (class SpeedService extends BaseService {
       );
     }
 
+    // Sort by timestamp ascending so deltas always represent forward time.
+    const sorted = distanceLogs.every((l) => l.timestamp)
+      ? [...distanceLogs].sort(
+          (a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+        )
+      : distanceLogs;
+
     const distanceDecrementsMetersPerMinute = [];
 
-    distanceLogs.forEach((log, index) => {
+    sorted.forEach((log, index) => {
       if (index > 0) {
         const previousDistanceMeters = Number(
-          distanceLogs[index - 1].distanceMeters ??
-            distanceLogs[index - 1].distance ??
-            0,
+          sorted[index - 1].distanceMeters ?? sorted[index - 1].distance ?? 0,
         );
         const currentDistanceMeters = Number(
           log.distanceMeters ?? log.distance ?? 0,
@@ -102,22 +108,23 @@ module.exports = new (class SpeedService extends BaseService {
   calculateAndPost = async (
     distanceLogsOrBurst = [],
     unit = SPEED_UNITS.MPM,
+    options = {},
   ) => {
     const distanceLogs = Array.isArray(distanceLogsOrBurst)
       ? distanceLogsOrBurst
       : this.getValuesFromRadarBurst(distanceLogsOrBurst, unit).distanceLogs;
+
+    const timestampOrdered = distanceLogs.every((l) => l.timestamp);
     const { avgDistanceDecreasePerMinute, relativeSpeedKmh } =
       this.summarizeDistanceLogs(distanceLogs, unit);
 
-    console.log(
-      `Average distance decrease per minute: ${avgDistanceDecreasePerMinute} m/min`,
-    );
-    console.log(`Relative speed from radar trend: ${relativeSpeedKmh} km/h`);
-
-    // ! Normalize all speed units through km/h so matching results stay consistent.
+    // Normalize all speed units through km/h so matching results stay consistent.
     return this.simplePost({
+      targetId: options.targetId ?? null,
       speedKmh: relativeSpeedKmh,
       distanceDecreasePerMinuteMeters: avgDistanceDecreasePerMinute,
+      inputWindowCount: distanceLogs.length,
+      timestampOrdered,
       timestamp: new Date(),
     });
   };

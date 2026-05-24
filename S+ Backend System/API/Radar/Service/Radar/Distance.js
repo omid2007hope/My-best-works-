@@ -143,12 +143,20 @@ module.exports = new (class DistanceService extends BaseService {
 
     let estimatedFromFmcw = null;
 
-    if (
-      hasFmcwRawInputs &&
-      durationSeconds == null &&
-      directDistanceMeters == null
-    ) {
-      estimatedFromFmcw = this.calculateDistanceFromFmcwBurst(fmcwInputs);
+    const canUseFmcw =
+      fmcwInputs.lower_freq_mhz != null &&
+      fmcwInputs.upper_freq_mhz != null &&
+      fmcwInputs.chirp_period_us != null &&
+      fmcwInputs.adc_sampling_hz != null &&
+      fmcwInputs.peakSampleIndex != null &&
+      fmcwInputs.samples_per_chirp != null;
+
+    if (canUseFmcw && durationSeconds == null && directDistanceMeters == null) {
+      try {
+        estimatedFromFmcw = this.calculateDistanceFromFmcwBurst(fmcwInputs);
+      } catch (_) {
+        estimatedFromFmcw = null;
+      }
     }
 
     const estimatedDistanceMeters =
@@ -232,6 +240,143 @@ module.exports = new (class DistanceService extends BaseService {
     const beatFrequencyHz = (peakSampleIndex * adcSamplingHz) / samplesPerChirp;
 
     return (SPEED_OF_LIGHT_MPS * beatFrequencyHz) / (2 * chirpSlopeHzPerSecond);
+  };
+
+  // Find local maxima in a flat sample array above `threshold` with `minSpacing` sample separation.
+  extractPeaks = (samples = [], options = {}) => {
+    const threshold = options.threshold ?? 200;
+    const minSpacing = options.minSpacing ?? 3;
+    const peaks = [];
+
+    for (let i = 1; i < samples.length - 1; i += 1) {
+      const v = samples[i];
+      if (v < threshold) continue;
+      if (v <= samples[i - 1] || v < samples[i + 1]) continue;
+
+      if (peaks.length > 0 && i - peaks[peaks.length - 1].index < minSpacing) {
+        if (v > peaks[peaks.length - 1].amplitude) {
+          peaks[peaks.length - 1] = { index: i, amplitude: v };
+        }
+        continue;
+      }
+
+      peaks.push({ index: i, amplitude: v });
+    }
+
+    return peaks.sort((a, b) => b.amplitude - a.amplitude);
+  };
+
+  // Derive a distance record per detected peak in a burst.
+  // Returns an array of { targetIndex, peakSampleIndex, peakAmplitude, distanceMeters, computationSource, snrDb }.
+  getMultiTargetDistances = (burstPayload = {}, options = {}) => {
+    const payload =
+      burstPayload.payload && typeof burstPayload.payload === "object"
+        ? burstPayload.payload
+        : {};
+    const hasRawBurstData =
+      typeof burstPayload.data_base64 === "string" &&
+      burstPayload.data_base64.length > 0;
+
+    if (!hasRawBurstData) {
+      const single = this.getValuesFromRadarBurst(burstPayload);
+      if (single.estimatedDistanceMeters != null) {
+        return [
+          {
+            targetIndex: 0,
+            peakSampleIndex: single.peakSampleIndex,
+            peakAmplitude: null,
+            distanceMeters: single.estimatedDistanceMeters,
+            computationSource: single.distanceComputationSource,
+            snrDb: null,
+          },
+        ];
+      }
+      return [];
+    }
+
+    const burstValues = radarService.getBurstValues(burstPayload);
+    const samples = burstValues.samples || [];
+
+    const peaks = this.extractPeaks(samples, options);
+    if (!peaks.length) return [];
+
+    const lowerFreqMhz = this.pickFirstFiniteNumber(
+      burstPayload.lower_freq_mhz,
+      payload.lower_freq_mhz,
+      burstPayload.acquisition?.lower_freq_mhz,
+      burstPayload.physics?.lower_freq_mhz,
+    );
+    const upperFreqMhz = this.pickFirstFiniteNumber(
+      burstPayload.upper_freq_mhz,
+      payload.upper_freq_mhz,
+      burstPayload.acquisition?.upper_freq_mhz,
+      burstPayload.physics?.upper_freq_mhz,
+    );
+    const chirpPeriodUs = this.pickFirstFiniteNumber(
+      burstPayload.chirp_period_us,
+      payload.chirp_period_us,
+      burstPayload.acquisition?.chirp_period_us,
+      burstPayload.physics?.chirp_period_us,
+    );
+    const adcSamplingHz = this.pickFirstFiniteNumber(
+      burstPayload.adc_sampling_hz,
+      payload.adc_sampling_hz,
+      burstPayload.acquisition?.adc_sampling_hz,
+      burstPayload.physics?.adc_sampling_hz,
+    );
+    const samplesPerChirp = this.pickFirstFiniteNumber(
+      burstPayload.format?.samples_per_chirp,
+      payload.format?.samples_per_chirp,
+      burstValues.format?.samples_per_chirp,
+    );
+
+    const canUseFmcw =
+      lowerFreqMhz != null &&
+      upperFreqMhz != null &&
+      chirpPeriodUs != null &&
+      adcSamplingHz != null &&
+      samplesPerChirp != null;
+
+    const noiseFloor = this.pickFirstFiniteNumber(
+      burstPayload.noiseFloor,
+      burstPayload.physics?.noiseFloor,
+      payload.physics?.noiseFloor,
+    );
+
+    return peaks.map((peak, idx) => {
+      let distanceMeters = null;
+      let computationSource = null;
+
+      if (canUseFmcw) {
+        try {
+          distanceMeters = this.calculateDistanceFromFmcwBurst({
+            lower_freq_mhz: lowerFreqMhz,
+            upper_freq_mhz: upperFreqMhz,
+            chirp_period_us: chirpPeriodUs,
+            adc_sampling_hz: adcSamplingHz,
+            peakSampleIndex: peak.index,
+            samples_per_chirp: samplesPerChirp,
+          });
+          computationSource = "fmcw";
+        } catch (_) {
+          distanceMeters = null;
+        }
+      }
+
+      const snrDb =
+        noiseFloor != null && noiseFloor > 0
+          ? Number((20 * Math.log10(peak.amplitude / noiseFloor)).toFixed(1))
+          : null;
+
+      return {
+        targetIndex: idx,
+        peakSampleIndex: peak.index,
+        peakAmplitude: peak.amplitude,
+        distanceMeters,
+        computationSource,
+        snrDb,
+      };
+    });
   };
 
   CalculateAndPost = async (waveBounceBackDurationOrBurst) => {

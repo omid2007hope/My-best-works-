@@ -399,21 +399,78 @@ class RadarService extends BaseService {
     const { chirpsPerBurst, samplesPerChirp, channelsCount, bitsPerSample } =
       this.config;
 
+    // FMCW parameters — can be overridden via this.config for different range profiles.
+    const lowerFreqMhz = this.config.lower_freq_mhz ?? 77000;
+    const upperFreqMhz = this.config.upper_freq_mhz ?? 77200;
+    const chirpPeriodUs = this.config.chirp_period_us ?? 50;
+    const adcSamplingHz = this.config.adc_sampling_hz ?? 2_000_000;
+
+    // Number of synthetic targets in this mock burst.
+    const targetCount = Math.max(
+      1,
+      Math.floor(this.config.mockTargetCount ?? 3),
+    );
+    // When mockStochastic is false (e.g., in tests), peaks are deterministic at fixed bins.
+    const stochastic = this.config.mockStochastic !== false;
+
+    // Distribute target peak bins evenly across the range window with per-burst drift.
+    const targetPeakBins = Array.from({ length: targetCount }, (_, t) => {
+      const baseBin =
+        Math.floor(((t + 1) / (targetCount + 1)) * (samplesPerChirp - 2)) + 1;
+      const drift = stochastic
+        ? Math.round(Math.sin(this.sequenceNumber * 0.17 + t * 1.3) * 1.5)
+        : 0;
+      return Math.max(1, Math.min(samplesPerChirp - 2, baseBin + drift));
+    });
+
+    // Signal amplitudes.
+    const noiseAmplitude = 80;
+    const peakAmplitude = 3500;
+    const peakSigma = 1.2;
+
     const sampleBytes = bitsPerSample / 8;
     const totalSamples = chirpsPerBurst * samplesPerChirp * channelsCount;
     const totalBytes = totalSamples * sampleBytes;
     const buffer = Buffer.alloc(totalBytes);
 
-    for (let i = 0; i < totalSamples; i += 1) {
-      const value = (this.sequenceNumber + i) % 4096;
-      buffer.writeUInt16LE(value, i * sampleBytes);
+    for (let chirpIdx = 0; chirpIdx < chirpsPerBurst; chirpIdx += 1) {
+      for (let chanIdx = 0; chanIdx < channelsCount; chanIdx += 1) {
+        for (let s = 0; s < samplesPerChirp; s += 1) {
+          // Deterministic pseudo-noise background.
+          let value = Math.floor(
+            ((this.sequenceNumber * 7 + chirpIdx * 3 + chanIdx * 11 + s * 19) %
+              noiseAmplitude) +
+              noiseAmplitude * 0.3,
+          );
+
+          // Superimpose Gaussian peak for each synthetic target.
+          for (const bin of targetPeakBins) {
+            const dist = s - bin;
+            value += Math.floor(
+              peakAmplitude *
+                Math.exp((-0.5 * (dist * dist)) / (peakSigma * peakSigma)),
+            );
+          }
+
+          const clampedValue = Math.min(4095, Math.max(0, value));
+          // Interleaved channel layout: [s0_ch0, s0_ch1, s1_ch0, s1_ch1, ...]
+          const bufferIndex =
+            chirpIdx * samplesPerChirp * channelsCount +
+            s * channelsCount +
+            chanIdx;
+          buffer.writeUInt16LE(clampedValue, bufferIndex * sampleBytes);
+        }
+      }
     }
 
-    const lowerFreqMhz = 77000;
-    const upperFreqMhz = 77200;
-    const chirpPeriodUs = 50;
-    const adcSamplingHz = 2_000_000;
-    const peakSampleIndex = Math.floor(samplesPerChirp / 4);
+    // Derive noise floor and SNR from signal model.
+    const noiseFloorAmplitude = noiseAmplitude * 0.5 + noiseAmplitude * 0.3;
+    const snrDb = Number(
+      (20 * Math.log10(peakAmplitude / noiseFloorAmplitude)).toFixed(1),
+    );
+
+    // Primary (strongest) target bin used as legacy peakSampleIndex.
+    const primaryPeakBin = targetPeakBins[0];
 
     return {
       source: "mock",
@@ -434,7 +491,13 @@ class RadarService extends BaseService {
       upper_freq_mhz: upperFreqMhz,
       chirp_period_us: chirpPeriodUs,
       adc_sampling_hz: adcSamplingHz,
-      peakSampleIndex,
+      peakSampleIndex: primaryPeakBin,
+      noiseFloor: noiseFloorAmplitude,
+      snrDb,
+      mockTargets: targetPeakBins.map((bin, i) => ({
+        targetIndex: i,
+        peakBin: bin,
+      })),
       read_bytes: totalBytes,
       data_base64: buffer.toString("base64"),
     };

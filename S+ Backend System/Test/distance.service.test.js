@@ -59,7 +59,9 @@ test("distance service computes FMCW distance from required metadata", () => {
   assert.ok(burstValues.estimatedDistanceMeters > 0);
 });
 
-test("distance service fails early when FMCW required fields are missing", () => {
+test("distance service returns null distance when FMCW required fields are incomplete", () => {
+  // adc_sampling_hz and samples_per_chirp (derived from format) are missing,
+  // so FMCW path should be skipped gracefully and estimatedDistanceMeters should be null.
   const burst = buildRawBurst({
     lower_freq_mhz: 77000,
     upper_freq_mhz: 77200,
@@ -67,7 +69,7 @@ test("distance service fails early when FMCW required fields are missing", () =>
     peakSampleIndex: 8,
   });
 
-  assert.throws(() => {
-    distanceService.getValuesFromRadarBurst(burst);
-  }, /Missing required burst physics fields for FMCW distance/);
+  const result = distanceService.getValuesFromRadarBurst(burst);
+  assert.equal(result.estimatedDistanceMeters, null);
+  assert.equal(result.distanceComputationSource, null);
 });
