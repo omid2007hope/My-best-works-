@@ -1,5 +1,6 @@
 const BaseService = require("../BaseService/index");
 const SpeedModel = require("../../Model/Speed/SpeedModel");
+const radarService = require("./Radar");
 
 const SPEED_UNITS = Object.freeze({
   KMH: "KMH",
@@ -32,7 +33,7 @@ module.exports = new (class SpeedService extends BaseService {
     }
   };
 
-  calculateAndPost = async (distanceLogs = [], unit = SPEED_UNITS.MPM) => {
+  summarizeDistanceLogs = (distanceLogs = [], unit = SPEED_UNITS.MPM) => {
     if (!Array.isArray(distanceLogs) || distanceLogs.length < 2) {
       throw new Error(
         "At least two distance logs are required to calculate speed.",
@@ -60,10 +61,53 @@ module.exports = new (class SpeedService extends BaseService {
       distanceDecrementsMetersPerMinute.reduce((sum, val) => sum + val, 0) /
       distanceDecrementsMetersPerMinute.length;
 
-    const relativeSpeedKmh = this.toKmh(
+    return {
+      distanceDecrementsMetersPerMinute,
       avgDistanceDecreasePerMinute,
-      unit,
-    );
+      relativeSpeedKmh: this.toKmh(avgDistanceDecreasePerMinute, unit),
+    };
+  };
+
+  getValuesFromRadarBurst = (burstPayload = {}, unit = SPEED_UNITS.MPM) => {
+    const burstValues = radarService.getBurstValues(burstPayload);
+    const distanceLogs = Array.isArray(burstPayload.distanceLogs)
+      ? burstPayload.distanceLogs
+      : Array.isArray(burstPayload.distanceMetersByChirp)
+        ? burstPayload.distanceMetersByChirp.map((distanceMeters) => ({
+            distanceMeters,
+          }))
+        : [];
+
+    if (distanceLogs.length < 2) {
+      return {
+        ...burstValues,
+        distanceLogs,
+        speedKmh: null,
+        distanceDecreasePerMinuteMeters: null,
+        calculationReady: false,
+      };
+    }
+
+    const summary = this.summarizeDistanceLogs(distanceLogs, unit);
+
+    return {
+      ...burstValues,
+      distanceLogs,
+      speedKmh: summary.relativeSpeedKmh,
+      distanceDecreasePerMinuteMeters: summary.avgDistanceDecreasePerMinute,
+      calculationReady: true,
+    };
+  };
+
+  calculateAndPost = async (
+    distanceLogsOrBurst = [],
+    unit = SPEED_UNITS.MPM,
+  ) => {
+    const distanceLogs = Array.isArray(distanceLogsOrBurst)
+      ? distanceLogsOrBurst
+      : this.getValuesFromRadarBurst(distanceLogsOrBurst, unit).distanceLogs;
+    const { avgDistanceDecreasePerMinute, relativeSpeedKmh } =
+      this.summarizeDistanceLogs(distanceLogs, unit);
 
     console.log(
       `Average distance decrease per minute: ${avgDistanceDecreasePerMinute} m/min`,

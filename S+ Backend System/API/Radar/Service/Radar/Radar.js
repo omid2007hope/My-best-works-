@@ -65,6 +65,98 @@ class RadarService extends BaseService {
     throw new Error(`Unsupported bits_per_sample: ${sampleBytes * 8}`);
   }
 
+  #toFiniteNumber(value) {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) ? numericValue : null;
+  }
+
+  #pickFirstFiniteNumber(...values) {
+    for (const value of values) {
+      const numericValue = this.#toFiniteNumber(value);
+      if (numericValue != null) {
+        return numericValue;
+      }
+    }
+
+    return null;
+  }
+
+  #getPeakSampleIndex(samples = []) {
+    if (!Array.isArray(samples) || samples.length === 0) {
+      return null;
+    }
+
+    let peakIndex = 0;
+    let peakValue = samples[0];
+
+    for (let index = 1; index < samples.length; index += 1) {
+      if (samples[index] > peakValue) {
+        peakValue = samples[index];
+        peakIndex = index;
+      }
+    }
+
+    return peakIndex;
+  }
+
+  #buildPhysicsContext(rawBurst = {}, decodedBurst = {}) {
+    const payload =
+      rawBurst.payload && typeof rawBurst.payload === "object"
+        ? rawBurst.payload
+        : {};
+    const config =
+      rawBurst.config && typeof rawBurst.config === "object"
+        ? rawBurst.config
+        : this.config;
+
+    const physics = {
+      lower_freq_mhz: this.#pickFirstFiniteNumber(
+        rawBurst.lower_freq_mhz,
+        payload.lower_freq_mhz,
+        config.lower_freq_mhz,
+      ),
+      upper_freq_mhz: this.#pickFirstFiniteNumber(
+        rawBurst.upper_freq_mhz,
+        payload.upper_freq_mhz,
+        config.upper_freq_mhz,
+      ),
+      chirp_period_us: this.#pickFirstFiniteNumber(
+        rawBurst.chirp_period_us,
+        payload.chirp_period_us,
+        config.chirp_period_us,
+      ),
+      adc_sampling_hz: this.#pickFirstFiniteNumber(
+        rawBurst.adc_sampling_hz,
+        payload.adc_sampling_hz,
+        config.adc_sampling_hz,
+      ),
+      peakSampleIndex: this.#pickFirstFiniteNumber(
+        rawBurst.peakSampleIndex,
+        payload.peakSampleIndex,
+        decodedBurst.peakSampleIndex,
+        this.#getPeakSampleIndex(decodedBurst.samples),
+      ),
+      peakAmplitude: this.#pickFirstFiniteNumber(
+        rawBurst.peakAmplitude,
+        payload.peakAmplitude,
+        decodedBurst.maxSample,
+      ),
+      noiseFloor: this.#pickFirstFiniteNumber(
+        rawBurst.noiseFloor,
+        payload.noiseFloor,
+      ),
+      snrDb: this.#pickFirstFiniteNumber(rawBurst.snrDb, payload.snrDb),
+      rangeResolutionMeters: this.#pickFirstFiniteNumber(
+        rawBurst.rangeResolutionMeters,
+        payload.rangeResolutionMeters,
+      ),
+      txMask: rawBurst.txMask ?? payload.txMask ?? config.txMask ?? null,
+      rxMask: rawBurst.rxMask ?? payload.rxMask ?? config.rxMask ?? null,
+    };
+
+    return physics;
+  }
+
   getBurstValues = (burstPayload = {}) => {
     if (!burstPayload || typeof burstPayload !== "object") {
       throw new Error("Radar burst payload must be an object.");
@@ -270,6 +362,16 @@ class RadarService extends BaseService {
     }
 
     const decodedBurst = this.getBurstValues(rawBurst);
+    const physics = this.#buildPhysicsContext(rawBurst, decodedBurst);
+
+    const acquisition = {
+      chirp_period_us: physics.chirp_period_us,
+      lower_freq_mhz: physics.lower_freq_mhz,
+      upper_freq_mhz: physics.upper_freq_mhz,
+      adc_sampling_hz: physics.adc_sampling_hz,
+      txMask: physics.txMask,
+      rxMask: physics.rxMask,
+    };
 
     return this.simplePost({
       event: "burst",
@@ -279,10 +381,15 @@ class RadarService extends BaseService {
       streaming: this.streaming,
       sensorId: this.sensorId,
       config: this.config,
+      acquisition,
+      physics,
       format: rawBurst.format,
       read_bytes: rawBurst.read_bytes,
       data_base64: rawBurst.data_base64,
-      payload: decodedBurst,
+      payload: {
+        ...decodedBurst,
+        physics,
+      },
       timestamp: new Date(rawBurst.format?.timestamp_ms ?? Date.now()),
     });
   };
@@ -302,6 +409,12 @@ class RadarService extends BaseService {
       buffer.writeUInt16LE(value, i * sampleBytes);
     }
 
+    const lowerFreqMhz = 77000;
+    const upperFreqMhz = 77200;
+    const chirpPeriodUs = 50;
+    const adcSamplingHz = 2_000_000;
+    const peakSampleIndex = Math.floor(samplesPerChirp / 4);
+
     return {
       source: "mock",
       format: {
@@ -317,6 +430,11 @@ class RadarService extends BaseService {
         burst_data_crc: 0,
         timestamp_ms: Date.now(),
       },
+      lower_freq_mhz: lowerFreqMhz,
+      upper_freq_mhz: upperFreqMhz,
+      chirp_period_us: chirpPeriodUs,
+      adc_sampling_hz: adcSamplingHz,
+      peakSampleIndex,
       read_bytes: totalBytes,
       data_base64: buffer.toString("base64"),
     };
