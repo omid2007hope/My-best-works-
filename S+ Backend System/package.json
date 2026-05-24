@@ -4,6 +4,7 @@
   "scripts": {
     "install": "echo Skipping Radar native build during npm install",
     "start": "node Server.js",
+    "test": "node --test",
     "radar:build": "node-gyp rebuild",
     "radar:clean": "node-gyp clean"
   },
