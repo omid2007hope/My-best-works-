@@ -14,12 +14,6 @@ const identificationController =
       res.status(this.success).json(records);
     });
 
-    // Raw backfill — stores posted fields directly without any computation.
-    createIdentification = asyncHandler(async (req, res) => {
-      const record = await Identification.create(req.body || {});
-      res.status(this.created).json(record);
-    });
-
     // Compute-first — runs identification scoring and persists top-N candidates.
     computeIdentification = asyncHandler(async (req, res) => {
       const { speedKmh, durationHours, trajectoryProfile, topN, targetId } =

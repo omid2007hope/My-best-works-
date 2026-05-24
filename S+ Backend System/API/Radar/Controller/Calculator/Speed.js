@@ -13,12 +13,6 @@ const speedController = new (class SpeedController extends Status {
     res.status(this.success).json(records);
   });
 
-  // Raw backfill — stores posted fields directly without any computation.
-  createSpeed = asyncHandler(async (req, res) => {
-    const record = await Speed.create(req.body || {});
-    res.status(this.created).json(record);
-  });
-
   // Compute-first — derives speedKmh from a distanceLogs array (min 2 entries).
   computeSpeed = asyncHandler(async (req, res) => {
     const { distanceLogs, unit, targetId } = req.body || {};

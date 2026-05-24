@@ -13,12 +13,6 @@ const distanceController = new (class DistanceController extends Status {
     res.status(this.success).json(records);
   });
 
-  // Raw backfill — stores posted fields directly without any computation.
-  createDistance = asyncHandler(async (req, res) => {
-    const record = await Distance.create(req.body || {});
-    res.status(this.created).json(record);
-  });
-
   // Compute-first — calculates distanceMeters from burst payload or TOF field.
   computeDistance = asyncHandler(async (req, res) => {
     const record = await distanceService.CalculateAndPost(req.body);
