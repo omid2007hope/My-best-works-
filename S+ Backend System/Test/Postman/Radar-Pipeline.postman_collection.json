@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "S+ Radar Pipeline",
-    "description": "Collection for testing radar flow: status, init/start/stop, burst reads, and record endpoints.",
+    "description": "Collection for testing radar flow: status, init/start/stop, burst reads, records, compute endpoints, targets, and pipeline routes.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_postman_id": "6f5d6c1d-8b8f-4adf-a6e3-8d4e8f143201"
   },
@@ -145,6 +145,77 @@
                 "shutdown"
               ]
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Targets",
+      "item": [
+        {
+          "name": "Get Radar Targets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/targets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "targets"
+              ]
+            },
+            "description": "List all radar targets."
+          }
+        },
+        {
+          "name": "Get Radar Target",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/target/{{targetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "target",
+                "{{targetId}}"
+              ]
+            },
+            "description": "Read a single radar target by ID."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pipeline",
+      "item": [
+        {
+          "name": "Process Radar Pipeline",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pipeline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pipeline"
+              ]
+            },
+            "description": "Process the radar pipeline route."
           }
         }
       ]
@@ -296,6 +367,90 @@
                 "identification"
               ]
             }
+          }
+        },
+        {
+          "name": "Compute Distance Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"distanceMeters\": 1250.7\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/records/distance/compute",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "records",
+                "distance",
+                "compute"
+              ]
+            },
+            "description": "Compute a distance record via the radar records endpoint."
+          }
+        },
+        {
+          "name": "Compute Speed Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"speedKmh\": 900,\n  \"distanceDecreasePerMinuteMeters\": 15000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/records/speed/compute",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "records",
+                "speed",
+                "compute"
+              ]
+            },
+            "description": "Compute a speed record via the radar records endpoint."
+          }
+        },
+        {
+          "name": "Compute Identification Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"observation\": {\n    \"speedKmh\": 2100,\n    \"durationSeconds\": 120\n  },\n  \"candidates\": [\n    {\n      \"name\": \"Concorde\",\n      \"confidence\": 0.72\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/records/identification/compute",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "records",
+                "identification",
+                "compute"
+              ]
+            },
+            "description": "Compute an identification record via the radar records endpoint."
           }
         }
       ]
