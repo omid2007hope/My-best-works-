@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 
-const Server = require("../Radar/Gateway/Index");
+const Radar = require("../Radar/Gateway/Index");
+const Distance = require("../Distance/Gateaway/Index");
 
-const versionOneRouteGroups = [Server];
+const versionOneRouteGroups = [Radar, Distance];
 
 versionOneRouteGroups.forEach((featureRouter) => {
   router.use(featureRouter);
