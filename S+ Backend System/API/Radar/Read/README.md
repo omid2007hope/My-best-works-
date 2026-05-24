@@ -281,9 +281,9 @@ Records routes currently available:
   - API/Radar/Router/Distance/Post_Distance.js
 - UI view folder is empty, so map rendering is not implemented yet.
 
-## 8. Feasibility Answer (Can this be done?)
+## 8. Feasibility Decision (Is this possible?)
 
-Short answer: **Yes, possible**, but in two stages.
+Short answer: **Yes, possible**, but in stages with different confidence levels.
 
 ### 8.1 Possible now (with current project)
 
@@ -311,6 +311,19 @@ Short answer: **Yes, possible**, but in two stages.
   - radar site GPS location
   - bearing/elevation or multi-radar triangulation
   - optional ADS-B fusion for validation.
+
+### 8.4 Practical delivery expectations
+
+Expected by stage (single developer estimate):
+
+- Distance from available metadata: 1-2 weeks
+- Radial speed and smoothing: 1-3 weeks
+- Track lifecycle and confidence gates: 2-4 weeks
+- Map view with live tracks: 1-2 weeks after tracks API
+- Altitude and robust geolocation: 3-8 weeks depending on sensors/fusion
+- Strong identification confidence: ongoing model tuning with real data
+
+These ranges assume continuous access to burst data and stable API contracts.
 
 ## 9. Plane Location + Map Plan
 
@@ -350,7 +363,21 @@ Target output:
 - Level 2 (pilot): single-radar approximate map with assumptions.
 - Level 3 (operational): multi-sensor fused geo tracks and confidence gates.
 
-## 10. Immediate Next Steps (Execution Order)
+## 10. Go / No-Go Gates
+
+Proceed now (Go):
+
+- Burst decode and persistence are already operational.
+- Distance from explicit fields is operational.
+- Speed and ranking can be built incrementally from stored records.
+
+Do not claim production-grade output yet (No-Go until complete):
+
+- Real FMCW distance from raw samples without native metadata wiring.
+- Reliable altitude from single-radar geometry alone.
+- Reliable lat/lon mapping without angle or fusion inputs.
+
+## 11. Immediate Next Steps (Execution Order)
 
 1. Fix broken distance route wiring in API/Radar/Router/Distance/Post_Distance.js.
 2. Implement FMCW distance method using required metadata fields.
@@ -358,7 +385,26 @@ Target output:
 4. Add Track model and latest tracks API.
 5. Build minimal map UI and plot live tracks.
 
-## 11. Legal / IPR Notice
+## 12. Legal and Deployment Safety
+
+Software-only and passive pipeline work is generally low-risk:
+
+- burst parsing, tracking logic, ranking, APIs, and map rendering
+- passive sources such as ADS-B integration (where locally permitted)
+
+Active transmission/radar operation can be regulated and jurisdiction-specific:
+
+- verify local radio rules before real transmitter operation
+- use certified hardware/modules and permitted frequency bands
+- avoid any deployment near restricted airspace without authorization
+
+Recommended implementation sequence for safety:
+
+1. Build and validate full stack in mock + passive data mode.
+2. Integrate native SDK metadata and verify deterministic distance outputs.
+3. Add active sensor operation only after regulatory confirmation.
+
+## 13. Legal / IPR Notice
 
 Any contribution made to the issues of this repository that results in a
 "shall" requirement pointing to an essential patent will require the company
