@@ -27,6 +27,55 @@ Map markers and popup payloads reflect live API state correctly.
 
 # Radar End-to-End Plan
 
+## Mapped Flow & Execution Order
+
+This repository exposes the radar API under both `/radar` and `/server/radar`.
+The intended runtime flow is:
+
+1. Start the backend server:
+   - `node Server.js`
+2. Initialize the radar subsystem:
+   - `POST /server/radar/init`
+   - also available via `POST /radar/init`
+3. Start the radar stream:
+   - `POST /server/radar/start`
+4. Read the next burst from the radar:
+   - `GET /server/radar/burst`
+5. Optionally run the pipeline processing route:
+   - `POST /server/radar/pipeline`
+6. Use record endpoints for persistence and compute-first operations:
+   - `GET /server/radar/records/distance`
+   - `POST /server/radar/records/distance`
+   - `POST /server/radar/records/distance/compute`
+   - `GET /server/radar/records/speed`
+   - `POST /server/radar/records/speed`
+   - `POST /server/radar/records/speed/compute`
+   - `GET /server/radar/records/identification`
+   - `POST /server/radar/records/identification`
+   - `POST /server/radar/records/identification/compute`
+   - `GET /server/radar/records/radar`
+   - `POST /server/radar/records/radar`
+7. Access feature-specific compute and storage endpoints:
+   - `POST /server/radar/distance`
+   - `GET /server/radar/distance`
+   - `POST /server/radar/distance/compute`
+   - `POST /server/radar/speed`
+   - `GET /server/radar/speed`
+   - `POST /server/radar/speed/compute`
+   - `POST /server/radar/identification`
+   - `GET /server/radar/identification`
+   - `POST /server/radar/identification/compute`
+8. Query target metadata:
+   - `GET /server/radar/targets`
+   - `GET /server/radar/target/:targetId`
+9. Stop or shutdown the radar stream:
+   - `POST /server/radar/stop`
+   - `POST /server/radar/shutdown`
+
+### Visual flow map
+
+`Server start` -> `init` -> `start` -> `burst` -> `pipeline` -> `compute records` -> `targets` -> `stop/shutdown`
+
 This document is the implementation plan for building a full radar pipeline that can:
 
 - decode burst data
