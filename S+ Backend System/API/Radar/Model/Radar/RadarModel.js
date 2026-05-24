@@ -84,6 +84,14 @@ const radarSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
+    acquisition: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    physics: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
     format: {
       type: radarFormatSchema,
       required: true,
