@@ -5,7 +5,7 @@ const Radar = require("../Radar/Gateway/Index");
 const Distance = require("../Distance/Gateaway/index");
 const Identification = require("../Identification/Gateway/index");
 const Speed = require("../Speed/Gateway/index");
-const target = require("../Target/Gateway/index");
+const Target = require("../Target/Gateway/index");
 const pipeline = require("../Pipeline/Gateway/index");
 
 const versionOneRouteGroups = [
