@@ -1,8 +1,19 @@
+const path = require("path");
+const dotenv = require("dotenv");
 const BaseService = require("../BaseService/index");
 const DistanceModel = require("../../Model/Distance/DistanceModel");
 const radarService = require("./Radar");
 
+dotenv.config({ path: path.resolve(__dirname, "../../.env.local") });
+
 const SPEED_OF_LIGHT_MPS = 299792458;
+const isTestMode =
+  String(process.env.IsThisATest || "")
+    .trim()
+    .toLowerCase() === "true";
+const {
+  fakeBurstPayload: testBurstPayload = {},
+} = require("../../Data/Test_Data");
 
 module.exports = new (class DistanceService extends BaseService {
   constructor() {
@@ -53,6 +64,7 @@ module.exports = new (class DistanceService extends BaseService {
   };
 
   getValuesFromRadarBurst = (burstPayload = {}) => {
+    burstPayload = isTestMode ? testBurstPayload : burstPayload;
     const payload =
       burstPayload && typeof burstPayload.payload === "object"
         ? burstPayload.payload

@@ -1,22 +1,22 @@
-export const speedOfLight = 299792458; // in meters per second
+const speedOfLight = 299792458; // in meters per second
 
-export const waveBounceBackDurationSeconds = 20; // example value for Exp(20) seconds
-export const waveBounceBackDurationMs = 20000; // equivalent in milliseconds
-export const timeOfFlightSeconds = 20; // alternate time-of-flight field name
+const waveBounceBackDurationSeconds = 20; // example value for Exp(20) seconds
+const waveBounceBackDurationMs = 20000; // equivalent in milliseconds
+const timeOfFlightSeconds = 20; // alternate time-of-flight field name
 
-export const distanceMeters = 2997924580; // direct distance estimate
-export const estimatedDistanceMeters = 2997924580; // fallback direct estimate
-export const rangeMeters = 2997924580; // same physical range value
-export const rangeResolutionMeters = 10; // example range resolution
-export const peakSampleIndex = 5; // example peak sample index
+const distanceMeters = 2997924580; // direct distance estimate
+const estimatedDistanceMeters = 2997924580; // fallback direct estimate
+const rangeMeters = 2997924580; // same physical range value
+const rangeResolutionMeters = 10; // example range resolution
+const peakSampleIndex = 5; // example peak sample index
 
-export const lower_freq_mhz = 77000;
-export const upper_freq_mhz = 77200;
-export const chirp_period_us = 50;
-export const adc_sampling_hz = 2000000;
-export const samplesPerChirp = 64;
+const lower_freq_mhz = 77000;
+const upper_freq_mhz = 77200;
+const chirp_period_us = 50;
+const adc_sampling_hz = 2000000;
+const samplesPerChirp = 64;
 
-export const burstFormat = {
+const burstFormat = {
   sequence_number: 1,
   max_sample_value: 4095,
   bits_per_sample: 16,
@@ -30,9 +30,9 @@ export const burstFormat = {
   timestamp_ms: 0,
 };
 
-export const rawBurstBase64 = "AAECAwQFBgc="; // base64 of 8 arbitrary bytes
+const rawBurstBase64 = "AAECAwQFBgc="; // base64 of 8 arbitrary bytes
 
-export const fakeBurstPayload = {
+const fakeBurstPayload = {
   waveBounceBackDurationSeconds,
   waveBounceBackDurationMs,
   timeOfFlightSeconds,
@@ -48,4 +48,24 @@ export const fakeBurstPayload = {
   format: burstFormat,
   data_base64: rawBurstBase64,
   read_bytes: 8,
+};
+
+module.exports = {
+  speedOfLight,
+  waveBounceBackDurationSeconds,
+  waveBounceBackDurationMs,
+  timeOfFlightSeconds,
+  distanceMeters,
+  estimatedDistanceMeters,
+  rangeMeters,
+  rangeResolutionMeters,
+  peakSampleIndex,
+  lower_freq_mhz,
+  upper_freq_mhz,
+  chirp_period_us,
+  adc_sampling_hz,
+  samplesPerChirp,
+  burstFormat,
+  rawBurstBase64,
+  fakeBurstPayload,
 };
