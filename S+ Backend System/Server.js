@@ -2,13 +2,11 @@ const cors = require("cors");
 const express = require("express");
 const app = express();
 
+const connectMongoDB = require("./API/Radar/DataBase/MongoDB");
 const { portSwitch } = require("./Tools/Server/PortSwitch");
 
-const radarRouter = require("./API/Radar/Router/Main/index");
-
-const connectMongoDB = require("./API/Radar/DataBase/MongoDB");
-
 const healthRouter = require("./Router/Main/index");
+const radarRouter = require("./API/Radar/Router/Main/index");
 
 app.use(cors());
 app.use(express.json());
