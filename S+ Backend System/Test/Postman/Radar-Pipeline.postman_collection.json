@@ -1,0 +1,311 @@
+{
+  "info": {
+    "name": "S+ Radar Pipeline",
+    "description": "Collection for testing radar flow: status, init/start/stop, burst reads, and record endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "6f5d6c1d-8b8f-4adf-a6e3-8d4e8f143201"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Get Radar Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "status"
+              ]
+            },
+            "description": "Check radar runtime mode, initialization, and stream status."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lifecycle",
+      "item": [
+        {
+          "name": "Initialize Radar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sensorId\": 1,\n  \"countryCode\": \"US\",\n  \"config\": {\n    \"chirpsPerBurst\": 16,\n    \"samplesPerChirp\": 64,\n    \"channelsCount\": 2,\n    \"bitsPerSample\": 16,\n    \"lower_freq_mhz\": 77000,\n    \"upper_freq_mhz\": 77200,\n    \"chirp_period_us\": 50,\n    \"adc_sampling_hz\": 2000000\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/init",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "init"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Start Streaming",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "start"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Read Burst",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/burst",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "burst"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Stop Streaming",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/stop",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stop"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Shutdown Radar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/shutdown",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shutdown"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Records",
+      "item": [
+        {
+          "name": "Get Radar Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/records/radar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "records",
+                "radar"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Distance Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/records/distance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "records",
+                "distance"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Distance Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"distanceMeters\": 1240.5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/records/distance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "records",
+                "distance"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Speed Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/records/speed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "records",
+                "speed"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Speed Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"speedKmh\": 880,\n  \"distanceDecreasePerMinuteMeters\": 14666\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/records/speed",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "records",
+                "speed"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Identification Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/records/identification",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "records",
+                "identification"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Identification Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"observation\": {\n    \"speedKmh\": 2100,\n    \"durationSeconds\": 120\n  },\n  \"candidates\": [\n    {\n      \"name\": \"Concorde\",\n      \"confidence\": 0.72\n    },\n    {\n      \"name\": \"SR-71\",\n      \"confidence\": 0.61\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/records/identification",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "records",
+                "identification"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000/server/radar",
+      "type": "string"
+    }
+  ]
+}
