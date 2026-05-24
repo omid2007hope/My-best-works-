@@ -16,7 +16,19 @@ class RadarService extends BaseService {
       samplesPerChirp: 64,
       channelsCount: 2,
       bitsPerSample: 16,
+      // X-band FMCW: 2 MHz bandwidth → range resolution ≈ 75 m; targets reach 50–150 km.
+      lower_freq_mhz: 9300,
+      upper_freq_mhz: 9302,
+      chirp_period_us: 1000,
+      adc_sampling_hz: 2_000_000,
     };
+    // Mock target states: realistic aircraft at X-band radar ranges.
+    this._mockTargetStates = [
+      { distanceMeters: 50_000, approachSpeedKmh: 850 },
+      { distanceMeters: 80_000, approachSpeedKmh: 920 },
+      { distanceMeters: 120_000, approachSpeedKmh: 760 },
+    ];
+    this._lastMockBurstTime = null;
   }
 
   #loadNativeModule() {
@@ -400,30 +412,56 @@ class RadarService extends BaseService {
       this.config;
 
     // FMCW parameters — can be overridden via this.config for different range profiles.
-    const lowerFreqMhz = this.config.lower_freq_mhz ?? 77000;
-    const upperFreqMhz = this.config.upper_freq_mhz ?? 77200;
-    const chirpPeriodUs = this.config.chirp_period_us ?? 50;
+    const lowerFreqMhz = this.config.lower_freq_mhz ?? 9300;
+    const upperFreqMhz = this.config.upper_freq_mhz ?? 9302;
+    const chirpPeriodUs = this.config.chirp_period_us ?? 1000;
     const adcSamplingHz = this.config.adc_sampling_hz ?? 2_000_000;
 
-    // Number of synthetic targets in this mock burst.
+    // ── Advance target positions ──────────────────────────────────────────────
+    const nowMs = Date.now();
+    const deltaSeconds =
+      this._lastMockBurstTime != null
+        ? Math.min((nowMs - this._lastMockBurstTime) / 1000, 60)
+        : 1.0; // first burst: assume 1-second interval
+    this._lastMockBurstTime = nowMs;
+
+    // Ensure _mockTargetStates matches config.mockTargetCount if overridden.
     const targetCount = Math.max(
       1,
       Math.floor(this.config.mockTargetCount ?? 3),
     );
-    // When mockStochastic is false (e.g., in tests), peaks are deterministic at fixed bins.
-    const stochastic = this.config.mockStochastic !== false;
+    while (this._mockTargetStates.length < targetCount) {
+      const idx = this._mockTargetStates.length;
+      this._mockTargetStates.push({
+        distanceMeters: 40_000 + idx * 25_000,
+        approachSpeedKmh: 700 + idx * 80,
+      });
+    }
+    const activeTargets = this._mockTargetStates.slice(0, targetCount);
 
-    // Distribute target peak bins evenly across the range window with per-burst drift.
-    const targetPeakBins = Array.from({ length: targetCount }, (_, t) => {
-      const baseBin =
-        Math.floor(((t + 1) / (targetCount + 1)) * (samplesPerChirp - 2)) + 1;
-      const drift = stochastic
-        ? Math.round(Math.sin(this.sequenceNumber * 0.17 + t * 1.3) * 1.5)
-        : 0;
-      return Math.max(1, Math.min(samplesPerChirp - 2, baseBin + drift));
+    // Advance each target: decrease distance by approachSpeed * deltaT, wrap at 5 km.
+    activeTargets.forEach((t) => {
+      const approachMps = (t.approachSpeedKmh * 1000) / 3600;
+      t.distanceMeters -= approachMps * deltaSeconds;
+      if (t.distanceMeters < 5_000) {
+        t.distanceMeters = 150_000; // reset: target passed / new target appeared
+      }
     });
 
-    // Signal amplitudes.
+    // ── Compute FMCW peak bin for each target distance ────────────────────────
+    // bin = distance * 2 * chirpSlope / (c * fADC / Ns)
+    const SPEED_OF_LIGHT_MPS = 299792458;
+    const bandwidthHz = (upperFreqMhz - lowerFreqMhz) * 1_000_000;
+    const chirpSlopeHzPerSecond = bandwidthHz / (chirpPeriodUs / 1_000_000);
+
+    const targetPeakBins = activeTargets.map((t) => {
+      const binFloat =
+        (t.distanceMeters * 2 * chirpSlopeHzPerSecond) /
+        (SPEED_OF_LIGHT_MPS * (adcSamplingHz / samplesPerChirp));
+      return Math.max(1, Math.min(samplesPerChirp - 2, Math.round(binFloat)));
+    });
+
+    // ── Build sample buffer with Gaussian peaks ───────────────────────────────
     const noiseAmplitude = 80;
     const peakAmplitude = 3500;
     const peakSigma = 1.2;
@@ -436,14 +474,12 @@ class RadarService extends BaseService {
     for (let chirpIdx = 0; chirpIdx < chirpsPerBurst; chirpIdx += 1) {
       for (let chanIdx = 0; chanIdx < channelsCount; chanIdx += 1) {
         for (let s = 0; s < samplesPerChirp; s += 1) {
-          // Deterministic pseudo-noise background.
           let value = Math.floor(
             ((this.sequenceNumber * 7 + chirpIdx * 3 + chanIdx * 11 + s * 19) %
               noiseAmplitude) +
               noiseAmplitude * 0.3,
           );
 
-          // Superimpose Gaussian peak for each synthetic target.
           for (const bin of targetPeakBins) {
             const dist = s - bin;
             value += Math.floor(
@@ -453,7 +489,6 @@ class RadarService extends BaseService {
           }
 
           const clampedValue = Math.min(4095, Math.max(0, value));
-          // Interleaved channel layout: [s0_ch0, s0_ch1, s1_ch0, s1_ch1, ...]
           const bufferIndex =
             chirpIdx * samplesPerChirp * channelsCount +
             s * channelsCount +
@@ -463,14 +498,10 @@ class RadarService extends BaseService {
       }
     }
 
-    // Derive noise floor and SNR from signal model.
     const noiseFloorAmplitude = noiseAmplitude * 0.5 + noiseAmplitude * 0.3;
     const snrDb = Number(
       (20 * Math.log10(peakAmplitude / noiseFloorAmplitude)).toFixed(1),
     );
-
-    // Primary (strongest) target bin used as legacy peakSampleIndex.
-    const primaryPeakBin = targetPeakBins[0];
 
     return {
       source: "mock",
@@ -485,18 +516,20 @@ class RadarService extends BaseService {
         is_channels_interlieved: true,
         is_big_endian: false,
         burst_data_crc: 0,
-        timestamp_ms: Date.now(),
+        timestamp_ms: nowMs,
       },
       lower_freq_mhz: lowerFreqMhz,
       upper_freq_mhz: upperFreqMhz,
       chirp_period_us: chirpPeriodUs,
       adc_sampling_hz: adcSamplingHz,
-      peakSampleIndex: primaryPeakBin,
+      peakSampleIndex: targetPeakBins[0],
       noiseFloor: noiseFloorAmplitude,
       snrDb,
-      mockTargets: targetPeakBins.map((bin, i) => ({
+      mockTargets: activeTargets.map((t, i) => ({
         targetIndex: i,
-        peakBin: bin,
+        peakBin: targetPeakBins[i],
+        distanceMeters: Math.round(t.distanceMeters),
+        approachSpeedKmh: t.approachSpeedKmh,
       })),
       read_bytes: totalBytes,
       data_base64: buffer.toString("base64"),

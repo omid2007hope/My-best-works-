@@ -295,9 +295,28 @@ module.exports = new (class DistanceService extends BaseService {
     }
 
     const burstValues = radarService.getBurstValues(burstPayload);
-    const samples = burstValues.samples || [];
 
-    const peaks = this.extractPeaks(samples, options);
+    // Build a coherently-averaged range profile by summing ch0 across all
+    // chirps and dividing by chirp count. This collapses the full interleaved
+    // buffer (chirps × samples × channels) into a single 64-bin array where
+    // each index IS the beat-frequency bin — suitable for calculateDistanceFromFmcwBurst.
+    const firstChirpCh0 =
+      burstValues.samplesByChirp[0]?.channels[0]?.samples ?? [];
+    const binsPerChirp = firstChirpCh0.length;
+    const rangeProfile = new Array(binsPerChirp).fill(0);
+    for (const chirp of burstValues.samplesByChirp) {
+      const ch0 = chirp.channels[0]?.samples ?? [];
+      for (let i = 0; i < binsPerChirp; i += 1) {
+        rangeProfile[i] += ch0[i] ?? 0;
+      }
+    }
+    const chirpCount = burstValues.samplesByChirp.length || 1;
+    for (let i = 0; i < binsPerChirp; i += 1) {
+      rangeProfile[i] = Math.round(rangeProfile[i] / chirpCount);
+    }
+
+    const topN = options.topN ?? 10;
+    const peaks = this.extractPeaks(rangeProfile, options).slice(0, topN);
     if (!peaks.length) return [];
 
     const lowerFreqMhz = this.pickFirstFiniteNumber(
@@ -324,11 +343,12 @@ module.exports = new (class DistanceService extends BaseService {
       burstPayload.acquisition?.adc_sampling_hz,
       burstPayload.physics?.adc_sampling_hz,
     );
-    const samplesPerChirp = this.pickFirstFiniteNumber(
-      burstPayload.format?.samples_per_chirp,
-      payload.format?.samples_per_chirp,
-      burstValues.format?.samples_per_chirp,
-    );
+    const samplesPerChirp =
+      this.pickFirstFiniteNumber(
+        burstPayload.format?.samples_per_chirp,
+        payload.format?.samples_per_chirp,
+        burstValues.format?.samples_per_chirp,
+      ) ?? binsPerChirp;
 
     const canUseFmcw =
       lowerFreqMhz != null &&

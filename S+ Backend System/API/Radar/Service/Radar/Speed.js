@@ -59,7 +59,19 @@ module.exports = new (class SpeedService extends BaseService {
           log.distanceMeters ?? log.distance ?? 0,
         );
         const decrement = previousDistanceMeters - currentDistanceMeters;
-        distanceDecrementsMetersPerMinute.push(decrement);
+
+        // When both entries have timestamps, scale the delta to per-minute units.
+        if (sorted[index - 1].timestamp && log.timestamp) {
+          const deltaMs =
+            new Date(log.timestamp).getTime() -
+            new Date(sorted[index - 1].timestamp).getTime();
+          const deltaMinutes = deltaMs / 60_000;
+          distanceDecrementsMetersPerMinute.push(
+            deltaMinutes > 0 ? decrement / deltaMinutes : decrement,
+          );
+        } else {
+          distanceDecrementsMetersPerMinute.push(decrement);
+        }
       }
     });
 
