@@ -6,20 +6,20 @@ const Speed = require("../../Model/Speed/SpeedModel");
 const Identification = require("../../Model/Identification/IdentificationModel");
 const Radar = require("../../Model/Radar/RadarModel");
 
-const radarRecordsController =
-  new (class RadarRecordsController extends Status {
-    listRadar = asyncHandler(async (req, res) => {
-      const records = await Radar.find().sort({ timestamp: -1 });
+const identificationController =
+  new (class IdentificationController extends Status {
+    listIdentification = asyncHandler(async (req, res) => {
+      const records = await Identification.find().sort({ timestamp: -1 });
       res.status(this.success).json(records);
     });
 
-    createRadar = asyncHandler(async (req, res) => {
-      const record = await Radar.create(req.body || {});
+    createIdentification = asyncHandler(async (req, res) => {
+      const record = await Identification.create(req.body || {});
       res.status(this.created).json(record);
     });
   })();
 
 module.exports = {
-  listRadar: radarRecordsController.listRadar,
-  createRadar: radarRecordsController.createRadar,
+  listIdentification: identificationController.listIdentification,
+  createIdentification: identificationController.createIdentification,
 };
