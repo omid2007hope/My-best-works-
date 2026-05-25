@@ -1,6 +1,10 @@
 const speedOfLight = 299792458; // in meters per second
 
-const waveBounceBackDurationSeconds = 20; // example value for Exp(20) seconds
+const waveReflectionDuration = [
+  { id: 1, value: 20000, unti: "ms", timestamp: "12:00pm" },
+  { id: 2, value: 15000, unit: "ms", timestamp: "01:00pm" },
+];
+
 const waveBounceBackDurationMs = 20000; // equivalent in milliseconds
 const timeOfFlightSeconds = 20; // alternate time-of-flight field name
 
@@ -52,7 +56,7 @@ const fakeBurstPayload = {
 
 module.exports = {
   speedOfLight,
-  waveBounceBackDurationSeconds,
+  waveReflectionDuration,
   waveBounceBackDurationMs,
   timeOfFlightSeconds,
   distanceMeters,
