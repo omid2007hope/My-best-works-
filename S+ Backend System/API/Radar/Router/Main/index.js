@@ -3,19 +3,8 @@ const router = express.Router();
 
 const Radar = require("../Radar/Gateway/Index");
 const Distance = require("../Distance/Gateaway/index");
-const Identification = require("../Identification/Gateway/index");
-const Speed = require("../Speed/Gateway/index");
-const Target = require("../Target/Gateway/index");
-const pipeline = require("../Pipeline/Gateway/index");
 
-const versionOneRouteGroups = [
-  Radar,
-  Distance,
-  Identification,
-  Speed,
-  Target,
-  pipeline,
-];
+const versionOneRouteGroups = [Radar, Distance];
 
 versionOneRouteGroups.forEach((featureRouter) => {
   router.use(featureRouter);
