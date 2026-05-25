@@ -1,7 +1,7 @@
 const speedOfLight = 299792458; // in meters per second
 
 const waveReflectionDuration = [
-  { id: 1, value: 20000, unti: "ms", timestamp: "12:00pm" },
+  { id: 1, value: 20000, unit: "ms", timestamp: "12:00pm" },
   { id: 2, value: 15000, unit: "ms", timestamp: "01:00pm" },
 ];
 

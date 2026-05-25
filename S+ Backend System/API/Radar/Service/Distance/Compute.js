@@ -2,16 +2,18 @@ const BaseService = require("../BaseService");
 const { waveReflectionDuration } = require("../../Data/Test_Data");
 
 module.exports = new (class ComputeDistanceService extends BaseService {
-  normalizeData = () => {
-    return waveReflectionDuration.map((items) => {
-      const data = {
-        id: items.id,
-        value: items.value,
-        unit: items.unit,
-        timeStamp: items.timestamp,
-      };
-      return this.miliSecondToSecond(data);
-    });
+  normalizeData = async () => {
+    return Promise.all(
+      waveReflectionDuration.map(async (items) => {
+        const data = {
+          id: items.id,
+          value: items.value,
+          unit: items.unit,
+          timeStamp: items.timestamp,
+        };
+        return this.miliSecondToSecond(data);
+      }),
+    );
   };
 
   miliSecondToSecond = (data) => {
