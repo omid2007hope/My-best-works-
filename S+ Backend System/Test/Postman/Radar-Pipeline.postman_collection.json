@@ -175,12 +175,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/target/{{targetId}}",
+              "raw": "{{baseUrl}}/targets/{{targetId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "target",
+                "targets",
                 "{{targetId}}"
               ]
             },
@@ -207,15 +207,48 @@
               "raw": "{}"
             },
             "url": {
-              "raw": "{{baseUrl}}/pipeline",
+              "raw": "{{baseUrl}}/pipeline/process",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
-                "pipeline"
+                "pipeline",
+                "process"
               ]
             },
             "description": "Process the radar pipeline route."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Distance",
+      "item": [
+        {
+          "name": "Compute Distance (root)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"distanceMeters\": 1250.7\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/distance/compute",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "distance",
+                "compute"
+              ]
+            },
+            "description": "Compute distance via the root distance gateway endpoint."
           }
         }
       ]
@@ -238,6 +271,33 @@
                 "radar"
               ]
             }
+          }
+        },
+        {
+          "name": "Create Radar Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"source\": \"radar\",\n  \"payload\": {\n    \"rangeMeters\": 3200,\n    \"azimuthDegrees\": 22.5\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/records/radar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "records",
+                "radar"
+              ]
+            },
+            "description": "Create a radar record using the records endpoint."
           }
         },
         {
