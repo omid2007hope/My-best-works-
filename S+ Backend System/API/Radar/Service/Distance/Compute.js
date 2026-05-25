@@ -17,9 +17,9 @@ module.exports = new (class ComputeDistanceService extends BaseService {
   miliSecondToSecond = (data) => {
     if (data.unit !== null && data.unit === "ms") {
       const waveReflectionDurationInSecond = data.value / 1000;
-      const result = this.simpleDistanceCompute(waveReflectionDurationInSecond);
-      return result;
+      return this.simpleDistanceCompute(waveReflectionDurationInSecond);
     }
+    return data;
   };
 
   simpleDistanceCompute = (waveReflectionDurationInSecond) => {
