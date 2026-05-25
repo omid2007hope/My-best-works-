@@ -37,7 +37,6 @@ const burstFormat = {
 const rawBurstBase64 = "AAECAwQFBgc="; // base64 of 8 arbitrary bytes
 
 const fakeBurstPayload = {
-  waveBounceBackDurationSeconds,
   waveBounceBackDurationMs,
   timeOfFlightSeconds,
   distanceMeters,
