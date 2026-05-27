@@ -29,4 +29,8 @@ module.exports = new (class ComputeDistanceService extends BaseService {
     const distance = (waveReflectionDurationInSecond * speedOfLight) / 2;
     return this.simplePost(distance);
   };
+
+  getDistanceLogs = () => {
+    return this.simpleGet();
+  };
 })();
