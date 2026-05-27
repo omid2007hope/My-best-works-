@@ -5,6 +5,7 @@ const {
   normalizeData,
   getDistanceLogs,
 } = require("../../Service/Distance/Compute");
+const { calculateDiffrence } = require("../../Service/Speed/Compute");
 
 const distanceController = new (class DistanceController extends Status {
   computeDistance = asyncHandler(async (req, res) => {
@@ -22,7 +23,8 @@ const distanceController = new (class DistanceController extends Status {
   getDistanceLogs = asyncHandler(async (req, res) => {
     try {
       const result = await getDistanceLogs();
-      return res.status(this.success).json(result);
+      const speedData = await calculateDiffrence(result);
+      return res.status(this.success).json({ ...result, speedData });
     } catch (error) {
       return res
         .status(this.error)
